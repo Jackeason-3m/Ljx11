@@ -1,0 +1,1607 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CodeForge · 题目 → 多语言代码生成器</title>
+<meta name="description" content="输入任意编程题目，选择目标语言，自动生成对应语言的完整可运行代码。" />
+<style>
+  :root{
+    --bg:#0b0f14;
+    --panel:#121a22;
+    --panel-2:#0e151c;
+    --line:#1e2b38;
+    --line-2:#2a3a4a;
+    --text:#e6edf3;
+    --muted:#8a99a8;
+    --accent:#3ddc97;
+    --accent-2:#4aa8ff;
+    --warn:#f5b942;
+    --radius:14px;
+    --mono:ui-monospace,SFMono-Regular,"Cascadia Code",Consolas,"JetBrains Mono",monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(900px 500px at 12% -8%, rgba(61,220,151,.10), transparent 60%),
+      radial-gradient(800px 500px at 95% 0%, rgba(74,168,255,.09), transparent 55%),
+      var(--bg);
+    color:var(--text);
+    font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei","PingFang SC",sans-serif;
+    font-size:15px;line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit}
+  input,textarea{font-family:inherit;color:inherit}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 22px}
+
+  /* ---------- 顶栏 ---------- */
+  header.top{
+    border-bottom:1px solid var(--line);
+    background:rgba(11,15,20,.75);
+    backdrop-filter:blur(12px);
+    position:sticky;top:0;z-index:40;
+  }
+  .top-in{max-width:1180px;margin:0 auto;padding:13px 22px;display:flex;align-items:center;justify-content:space-between;gap:18px}
+  .brand{display:flex;align-items:center;gap:11px;min-width:0}
+  .logo{
+    width:32px;height:32px;border-radius:9px;display:grid;place-items:center;
+    background:linear-gradient(140deg,var(--accent),#1f9d6b);
+    color:#04120c;font-family:var(--mono);font-weight:800;font-size:13px;letter-spacing:-1px;
+    flex:none;
+  }
+  .brand h1{font-size:16.5px;font-weight:700;letter-spacing:.01em;white-space:nowrap}
+  .brand .sub{font-size:12.5px;color:var(--muted);white-space:nowrap}
+  .top-right{display:flex;align-items:center;gap:10px}
+  .engine{
+    display:inline-flex;align-items:center;gap:7px;font-size:12px;
+    border:1px solid var(--line);border-radius:999px;padding:6px 12px;color:var(--muted);
+    background:var(--panel-2);white-space:nowrap;
+  }
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px rgba(61,220,151,.14)}
+  .dot.api{background:var(--accent-2);box-shadow:0 0 0 3px rgba(74,168,255,.14)}
+  .btn-ghost{
+    border:1px solid var(--line);border-radius:9px;padding:7px 14px;font-size:13px;color:var(--muted);
+    transition:.18s;white-space:nowrap;
+  }
+  .btn-ghost:hover{color:var(--text);border-color:var(--line-2);background:var(--panel-2)}
+
+  /* ---------- 主区 ---------- */
+  main{padding:26px 0 10px}
+  .grid{display:grid;grid-template-columns:400px 1fr;gap:16px;align-items:stretch}
+  .panel{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    overflow:hidden;display:flex;flex-direction:column;
+  }
+  .panel-head{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:13px 16px;border-bottom:1px solid var(--line);background:var(--panel-2);
+  }
+  .panel-head h2{font-size:13px;font-weight:600;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
+  .panel-body{padding:16px}
+  .label{font-size:12px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+  .label b{color:var(--accent);font-weight:600;letter-spacing:0}
+
+  textarea#problem{
+    width:100%;min-height:118px;resize:vertical;
+    background:var(--panel-2);border:1px solid var(--line);border-radius:10px;
+    padding:13px 14px;font-size:14px;line-height:1.7;
+    outline:none;transition:.18s;
+  }
+  textarea#problem:focus{border-color:#2f4c66;box-shadow:0 0 0 3px rgba(74,168,255,.10)}
+  textarea#problem::placeholder{color:#5a6b7b}
+
+  .examples{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+  .examples button{
+    font-size:12px;padding:5px 11px;border-radius:999px;
+    border:1px dashed var(--line-2);color:var(--muted);transition:.16s;
+  }
+  .examples button:hover{color:var(--accent);border-color:var(--accent);border-style:solid}
+
+  .langs{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+  .langs button{
+    padding:9px 4px;border-radius:9px;border:1px solid var(--line);
+    background:var(--panel-2);font-size:13px;color:var(--muted);transition:.16s;
+    font-family:var(--mono);
+  }
+  .langs button:hover{color:var(--text);border-color:var(--line-2)}
+  .langs button.on{
+    color:#04120c;background:linear-gradient(140deg,var(--accent),#2bbd83);
+    border-color:transparent;font-weight:700;
+  }
+
+  .go{
+    width:100%;margin-top:16px;height:46px;border-radius:10px;
+    background:linear-gradient(120deg,var(--accent),#25bd80);
+    color:#04120c;font-weight:800;font-size:15px;letter-spacing:.02em;
+    display:flex;align-items:center;justify-content:center;gap:9px;
+    transition:.18s;box-shadow:0 8px 24px rgba(61,220,151,.18);
+  }
+  .go:hover{filter:brightness(1.07);transform:translateY(-1px)}
+  .go:active{transform:translateY(0)}
+  .go:disabled{opacity:.65;cursor:progress;transform:none}
+
+  #status{font-size:12.5px;color:var(--muted);margin-top:10px;min-height:19px;font-family:var(--mono)}
+
+  /* ---------- 分析卡 ---------- */
+  .analysis{margin-top:16px;border-top:1px solid var(--line);padding-top:16px;display:none}
+  .analysis.show{display:block}
+  .kv{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px}
+  .kv div{background:var(--panel-2);border:1px solid var(--line);border-radius:9px;padding:9px 11px}
+  .kv span{display:block;font-size:11px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase}
+  .kv strong{display:block;font-size:13.5px;margin-top:2px;font-weight:600}
+  .kv strong.g{color:var(--accent)}
+  .idea{font-size:13.5px;color:#b7c4d0;background:var(--panel-2);border-left:2px solid var(--accent);padding:10px 12px;border-radius:0 8px 8px 0}
+  .hits{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px}
+  .hits span{font-size:11.5px;font-family:var(--mono);color:var(--accent-2);background:rgba(74,168,255,.08);border:1px solid rgba(74,168,255,.22);padding:2px 8px;border-radius:6px}
+
+  /* ---------- 代码区 ---------- */
+  .code-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .badge{
+    font-family:var(--mono);font-size:12px;font-weight:700;
+    background:rgba(61,220,151,.10);color:var(--accent);
+    border:1px solid rgba(61,220,151,.26);padding:3px 10px;border-radius:6px;
+  }
+  .code-actions{display:flex;gap:7px}
+  .code-actions button{
+    font-size:12px;padding:5px 11px;border-radius:7px;border:1px solid var(--line);
+    color:var(--muted);transition:.16s;font-family:var(--mono);
+  }
+  .code-actions button:hover{color:var(--accent);border-color:rgba(61,220,151,.35);background:rgba(61,220,151,.06)}
+
+  .code-scroll{
+    display:flex;flex:1;min-height:340px;overflow:auto;
+    background:#0a1016;font-family:var(--mono);font-size:13px;line-height:1.7;
+  }
+  .gutter{
+    flex:none;padding:16px 12px 16px 16px;text-align:right;color:#37485a;
+    user-select:none;border-right:1px solid #16202b;background:#080d12;white-space:pre;
+  }
+  pre.code{margin:0;padding:16px;white-space:pre;flex:1;color:#cdd9e5;overflow:visible}
+  pre.code:empty::before{content:"← 输入题目后点击生成，这里会出现代码";color:#3f4f60}
+
+  .t-kw{color:#ff7b72}
+  .t-str{color:#a5d6a7}
+  .t-num{color:#79c0ff}
+  .t-fn{color:#d2a8ff}
+  .t-com{color:#5f7385;font-style:italic}
+  .t-pre{color:#ffa657}
+
+  .code-foot{
+    display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
+    padding:10px 16px;border-top:1px solid var(--line);
+    font-size:12px;color:var(--muted);font-family:var(--mono);background:var(--panel-2);
+  }
+
+  /* ---------- 题型区 ---------- */
+  section.topics{padding:34px 0 0}
+  .sec-title{display:flex;align-items:baseline;gap:12px;margin-bottom:16px}
+  .sec-title h2{font-size:17px}
+  .sec-title span{font-size:12px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
+  .sec-title::after{content:"";flex:1;height:1px;background:var(--line);transform:translateY(-5px)}
+  .tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:10px}
+  .tcard{
+    text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:11px;
+    padding:13px 15px;transition:.18s;
+  }
+  .tcard:hover{border-color:#2f4c66;background:#141d26;transform:translateY(-2px)}
+  .tcard b{display:block;font-size:14px;margin-bottom:3px}
+  .tcard small{font-size:12px;color:var(--muted);font-family:var(--mono)}
+
+  footer.foot{
+    margin-top:34px;border-top:1px solid var(--line);
+    padding:20px 0 40px;font-size:12.5px;color:#6b7d8f;line-height:1.9;
+  }
+
+  /* ---------- 设置抽屉 ---------- */
+  .overlay{
+    position:fixed;inset:0;background:rgba(4,8,12,.6);backdrop-filter:blur(2px);
+    opacity:0;pointer-events:none;transition:.22s;z-index:50;
+  }
+  .overlay.on{opacity:1;pointer-events:auto}
+  .drawer{
+    position:fixed;top:0;right:0;height:100%;width:380px;max-width:92vw;z-index:60;
+    background:var(--panel);border-left:1px solid var(--line);
+    transform:translateX(102%);transition:transform .26s cubic-bezier(.4,0,.2,1);
+    padding:22px;overflow:auto;
+  }
+  .drawer.on{transform:translateX(0)}
+  .drawer h3{font-size:15px;margin-bottom:6px}
+  .drawer p.hint{font-size:12.5px;color:var(--muted);margin-bottom:18px;line-height:1.7}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;letter-spacing:.06em}
+  .field input{
+    width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;
+    padding:9px 11px;font-size:13px;font-family:var(--mono);outline:none;
+  }
+  .field input:focus{border-color:#2f4c66}
+  .radio-row{display:flex;gap:8px;margin-bottom:16px}
+  .radio-row button{
+    flex:1;padding:9px;border-radius:8px;border:1px solid var(--line);
+    background:var(--panel-2);font-size:12.5px;color:var(--muted);transition:.16s;
+  }
+  .radio-row button.on{border-color:var(--accent);color:var(--accent);background:rgba(61,220,151,.08)}
+  .drawer .save{
+    width:100%;padding:11px;border-radius:9px;background:var(--accent);color:#04120c;
+    font-weight:700;font-size:14px;margin-top:6px;
+  }
+  .drawer .note{
+    margin-top:16px;font-size:12px;color:var(--muted);background:var(--panel-2);
+    border:1px dashed var(--line-2);border-radius:9px;padding:11px 13px;line-height:1.75;
+  }
+
+  #toast{
+    position:fixed;left:50%;bottom:34px;transform:translate(-50%,20px);
+    background:#1c2a36;border:1px solid var(--line-2);color:var(--text);
+    padding:10px 18px;border-radius:9px;font-size:13.5px;z-index:80;
+    opacity:0;pointer-events:none;transition:.24s;
+  }
+  #toast.on{opacity:1;transform:translate(-50%,0)}
+
+  @media (max-width:980px){
+    .grid{grid-template-columns:1fr}
+    .brand .sub{display:none}
+    .code-scroll{min-height:260px}
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-in">
+    <div class="brand">
+      <span class="logo">&lt;/&gt;</span>
+      <h1>CodeForge</h1>
+      <span class="sub">题目 → 多语言代码生成器</span>
+    </div>
+    <div class="top-right">
+      <span class="engine"><i class="dot" id="engineDot"></i><span id="engineText">本地引擎</span></span>
+      <button class="btn-ghost" id="openSet">接口设置</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="grid">
+
+    <!-- 左：输入 -->
+    <section class="panel">
+      <div class="panel-head">
+        <h2>① 题目</h2>
+        <button class="btn-ghost" id="clearBtn" style="padding:3px 10px;font-size:12px">清空</button>
+      </div>
+      <div class="panel-body">
+        <div class="label">题目描述 <b id="charCount">0 字</b></div>
+        <textarea id="problem" placeholder="用自然语言描述任意编程题目，例如：&#10;给定一个整数数组，请用快速排序把它按升序排列并输出。"></textarea>
+
+        <div class="examples" id="examples"></div>
+
+        <div class="label" style="margin-top:18px">② 目标语言</div>
+        <div class="langs" id="langs"></div>
+
+        <button class="go" id="genBtn">
+          <span>⚡</span><span>生成代码</span>
+        </button>
+        <div id="status"></div>
+
+        <div class="analysis" id="analysis">
+          <div class="kv">
+            <div><span>识别题型</span><strong class="g" id="aTopic">—</strong></div>
+            <div><span>置信度</span><strong id="aConf">—</strong></div>
+            <div><span>时间复杂度</span><strong id="aTime">—</strong></div>
+            <div><span>空间复杂度</span><strong id="aSpace">—</strong></div>
+          </div>
+          <div class="idea" id="aIdea">—</div>
+          <div class="hits" id="aHits"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 右：输出 -->
+    <section class="panel">
+      <div class="panel-head">
+        <div class="code-top">
+          <h2 style="margin:0">③ 生成的代码</h2>
+          <span class="badge" id="langBadge">Python</span>
+        </div>
+        <div class="code-actions">
+          <button id="copyBtn">复制</button>
+          <button id="dlBtn">下载</button>
+        </div>
+      </div>
+      <div class="code-scroll">
+        <div class="gutter" id="gutter"></div>
+        <pre class="code" id="code"></pre>
+      </div>
+      <div class="code-foot">
+        <span id="statLines">0 行</span>
+        <span id="statEngine">引擎：本地规则</span>
+        <span id="statTime">耗时 0 ms</span>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- 支持的题型 -->
+  <section class="topics">
+    <div class="sec-title"><h2>内置题型库</h2><span>点击任意题型填入示例题目</span></div>
+    <div class="tgrid" id="tgrid"></div>
+  </section>
+
+  <footer class="foot">
+    CodeForge · 人工智能课程期末作业 · 单文件静态实现，无需后端与联网即可演示。<br />
+    默认使用「本地规则引擎」：对题目做关键词语义匹配，再从模板库中合成目标语言代码；也可在「接口设置」中切换为真实大模型接口。
+  </footer>
+</main>
+
+<div class="overlay" id="overlay"></div>
+<aside class="drawer" id="drawer">
+  <h3>生成引擎设置</h3>
+  <p class="hint">默认使用本地规则引擎，零配置、可离线演示。若填写兼容 OpenAI 协议的接口信息，即可调用真实大模型生成代码。</p>
+
+  <div class="radio-row">
+    <button data-mode="local" id="mLocal">本地引擎</button>
+    <button data-mode="api" id="mApi">大模型接口</button>
+  </div>
+
+  <div class="field">
+    <label>接口地址 Base URL</label>
+    <input id="cfgBase" placeholder="https://api.deepseek.com/v1" />
+  </div>
+  <div class="field">
+    <label>API Key</label>
+    <input id="cfgKey" type="password" placeholder="sk-..." />
+  </div>
+  <div class="field">
+    <label>模型名称</label>
+    <input id="cfgModel" placeholder="deepseek-chat" />
+  </div>
+
+  <button class="save" id="saveSet">保存设置</button>
+
+  <div class="note">
+    说明：密钥只保存在你本机浏览器的 localStorage 中，不会上传到任何服务器。<br />
+    部分服务商禁止浏览器直接跨域调用，若调用失败会自动回退到本地引擎，演示不受影响。
+  </div>
+</aside>
+
+<div id="toast"></div>
+
+<script>
+/* =========================================================
+   1. 语言配置
+   ========================================================= */
+const LANGS = {
+  python: {
+    label: 'Python', ext: 'py', lineComment: '#', preproc: false,
+    keywords: ['def','return','if','elif','else','for','while','in','not','and','or','import','from','class','self','None','True','False','break','continue','print','len','range','input','int','str','list','dict','set','global','lambda','with','as','try','except','pass','yield','is','f','end']
+  },
+  java: {
+    label: 'Java', ext: 'java', lineComment: '//', preproc: false,
+    keywords: ['public','private','static','void','class','int','long','double','boolean','char','String','new','return','if','else','for','while','do','break','continue','import','package','final','this','null','true','false','interface','extends','implements','try','catch','throw','throws','System','out','println','print','abstract','super','instanceof','case','switch','default','byte','short','float','Math','Integer','Arrays','List','Map','HashMap','ArrayList','Scanner','getOrDefault']
+  },
+  cpp: {
+    label: 'C++', ext: 'cpp', lineComment: '//', preproc: true,
+    keywords: ['include','using','namespace','std','int','long','double','float','char','bool','void','return','if','else','for','while','do','break','continue','const','struct','class','public','private','new','delete','nullptr','true','false','vector','string','cout','cin','endl','swap','max','min','size_t','auto','template','typename','static','inline','sizeof','unsigned','pair','sort','map','set','iostream','algorithm']
+  },
+  javascript: {
+    label: 'JavaScript', ext: 'js', lineComment: '//', preproc: false,
+    keywords: ['function','return','if','else','for','while','do','break','continue','const','let','var','new','class','extends','this','null','undefined','true','false','typeof','instanceof','of','in','async','await','try','catch','finally','throw','=>','console','log','Math','Array','Object','Map','Set','JSON','Number','String','Boolean','filter','map','reduce','sort','push','join','split','length']
+  }
+};
+
+/* =========================================================
+   2. 题型模板库（每种题型 × 4 种语言）
+   ========================================================= */
+const TOPICS = [
+  {
+    id: 'sort', name: '快速排序', example: '给定一个整数数组，请用快速排序把它按升序排列并输出结果。',
+    keys: ['快速排序','快排','排序','升序','降序','排列','sort'],
+    time: 'O(n log n) 平均', space: 'O(log n) 递归栈',
+    idea: '选取基准值 pivot，把数组划分成小于、等于、大于基准的三段，再对左右两段递归排序，最后拼接。',
+    code: {
+      python:
+`def quick_sort(arr):
+    if len(arr) <= 1:
+        return arr
+    pivot = arr[len(arr) // 2]
+    left  = [x for x in arr if x < pivot]
+    mid   = [x for x in arr if x == pivot]
+    right = [x for x in arr if x > pivot]
+    return quick_sort(left) + mid + quick_sort(right)
+
+if __name__ == "__main__":
+    data = list(map(int, input("输入数组（空格分隔）: ").split()))
+    print("排序结果:", quick_sort(data))`,
+      java:
+`import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Scanner;
+
+public class QuickSort {
+    static void quickSort(int[] a, int lo, int hi) {
+        if (lo >= hi) return;
+        int p = partition(a, lo, hi);
+        quickSort(a, lo, p - 1);
+        quickSort(a, p + 1, hi);
+    }
+
+    static int partition(int[] a, int lo, int hi) {
+        int pivot = a[hi], i = lo;
+        for (int j = lo; j < hi; j++) {
+            if (a[j] < pivot) { int t = a[i]; a[i] = a[j]; a[j] = t; i++; }
+        }
+        int t = a[i]; a[i] = a[hi]; a[hi] = t;
+        return i;
+    }
+
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        List<Integer> list = new ArrayList<>();
+        while (sc.hasNextInt()) list.add(sc.nextInt());
+        int[] a = new int[list.size()];
+        for (int i = 0; i < a.length; i++) a[i] = list.get(i);
+        quickSort(a, 0, a.length - 1);
+        System.out.println(Arrays.toString(a));
+    }
+}`,
+      cpp:
+`#include <iostream>
+#include <vector>
+using namespace std;
+
+void quickSort(vector<int>& a, int lo, int hi) {
+    if (lo >= hi) return;
+    int pivot = a[hi], i = lo;
+    for (int j = lo; j < hi; ++j)
+        if (a[j] < pivot) swap(a[i++], a[j]);
+    swap(a[i], a[hi]);
+    quickSort(a, lo, i - 1);
+    quickSort(a, i + 1, hi);
+}
+
+int main() {
+    vector<int> a;
+    int x;
+    while (cin >> x) a.push_back(x);
+    quickSort(a, 0, (int)a.size() - 1);
+    for (size_t i = 0; i < a.size(); ++i)
+        cout << a[i] << (i + 1 == a.size() ? "" : " ");
+    cout << endl;
+    return 0;
+}`,
+      javascript:
+`function quickSort(arr) {
+  if (arr.length <= 1) return arr;
+  const pivot = arr[Math.floor(arr.length / 2)];
+  const left  = arr.filter(x => x < pivot);
+  const mid   = arr.filter(x => x === pivot);
+  const right = arr.filter(x => x > pivot);
+  return [...quickSort(left), ...mid, ...quickSort(right)];
+}
+
+const data = [5, 2, 9, 1, 7, 3, 8];
+console.log('排序结果:', quickSort(data));`
+    }
+  },
+  {
+    id: 'binary', name: '二分查找', example: '在一个有序数组中查找目标值，返回它的下标，找不到返回 -1。',
+    keys: ['二分查找','二分','折半','有序数组','查找','下标','search'],
+    time: 'O(log n)', space: 'O(1)',
+    idea: '维护左右指针，每次取中点比较，相等即命中，否则根据大小关系收缩一半区间，直到区间为空。',
+    code: {
+      python:
+`def binary_search(nums, target):
+    lo, hi = 0, len(nums) - 1
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        if nums[mid] == target:
+            return mid
+        if nums[mid] < target:
+            lo = mid + 1
+        else:
+            hi = mid - 1
+    return -1
+
+if __name__ == "__main__":
+    nums = [1, 3, 5, 7, 9, 11, 13]
+    target = 7
+    print(f"目标 {target} 的下标 = {binary_search(nums, target)}")`,
+      java:
+`public class BinarySearch {
+    static int search(int[] nums, int target) {
+        int lo = 0, hi = nums.length - 1;
+        while (lo <= hi) {
+            int mid = lo + (hi - lo) / 2;
+            if (nums[mid] == target) return mid;
+            if (nums[mid] < target) lo = mid + 1;
+            else hi = mid - 1;
+        }
+        return -1;
+    }
+
+    public static void main(String[] args) {
+        int[] nums = {1, 3, 5, 7, 9, 11, 13};
+        System.out.println(search(nums, 7));
+    }
+}`,
+      cpp:
+`#include <iostream>
+#include <vector>
+using namespace std;
+
+int binarySearch(const vector<int>& nums, int target) {
+    int lo = 0, hi = (int)nums.size() - 1;
+    while (lo <= hi) {
+        int mid = lo + (hi - lo) / 2;
+        if (nums[mid] == target) return mid;
+        if (nums[mid] < target) lo = mid + 1;
+        else hi = mid - 1;
+    }
+    return -1;
+}
+
+int main() {
+    vector<int> nums = {1, 3, 5, 7, 9, 11, 13};
+    cout << binarySearch(nums, 7) << endl;
+    return 0;
+}`,
+      javascript:
+`function binarySearch(nums, target) {
+  let lo = 0, hi = nums.length - 1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (nums[mid] === target) return mid;
+    if (nums[mid] < target) lo = mid + 1;
+    else hi = mid - 1;
+  }
+  return -1;
+}
+
+const nums = [1, 3, 5, 7, 9, 11, 13];
+console.log(binarySearch(nums, 7));`
+    }
+  },
+  {
+    id: 'fib', name: '斐波那契数列', example: '求斐波那契数列的第 n 项，n 由用户输入。',
+    keys: ['斐波那契','fibonacci','数列','兔子','递推','第 n 项'],
+    time: 'O(n)', space: 'O(1)',
+    idea: '用两个变量滚动保存相邻两项，从 0、1 出发迭代 n 次，避免递归造成的指数级重复计算。',
+    code: {
+      python:
+`def fib(n):
+    a, b = 0, 1
+    for _ in range(n):
+        a, b = b, a + b
+    return a
+
+if __name__ == "__main__":
+    n = int(input("请输入 n: "))
+    print(f"第 {n} 项 = {fib(n)}")`,
+      java:
+`public class Fibonacci {
+    static long fib(int n) {
+        long a = 0, b = 1;
+        for (int i = 0; i < n; i++) {
+            long t = a + b;
+            a = b;
+            b = t;
+        }
+        return a;
+    }
+
+    public static void main(String[] args) {
+        System.out.println(fib(30));
+    }
+}`,
+      cpp:
+`#include <iostream>
+using namespace std;
+
+long long fib(int n) {
+    long long a = 0, b = 1;
+    for (int i = 0; i < n; ++i) {
+        long long t = a + b;
+        a = b;
+        b = t;
+    }
+    return a;
+}
+
+int main() {
+    cout << fib(30) << endl;
+    return 0;
+}`,
+      javascript:
+`function fib(n) {
+  let a = 0n, b = 1n;
+  for (let i = 0; i < n; i++) {
+    [a, b] = [b, a + b];
+  }
+  return a;
+}
+
+console.log('第 30 项 = ' + fib(30));`
+    }
+  },
+  {
+    id: 'prime', name: '素数筛', example: '找出 1 到 n 之间的所有素数并输出。',
+    keys: ['素数','质数','筛法','prime','埃氏'],
+    time: 'O(n log log n)', space: 'O(n)',
+    idea: '开一个布尔数组标记候选数，从 2 开始把每个素数的倍数划掉，剩下的即为素数。',
+    code: {
+      python:
+`def sieve(n):
+    is_prime = [True] * (n + 1)
+    is_prime[0] = is_prime[1] = False
+    for i in range(2, int(n ** 0.5) + 1):
+        if is_prime[i]:
+            for j in range(i * i, n + 1, i):
+                is_prime[j] = False
+    return [i for i in range(n + 1) if is_prime[i]]
+
+if __name__ == "__main__":
+    print(sieve(50))`,
+      java:
+`import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+public class PrimeSieve {
+    static List<Integer> sieve(int n) {
+        boolean[] isPrime = new boolean[n + 1];
+        Arrays.fill(isPrime, true);
+        isPrime[0] = false;
+        if (n >= 1) isPrime[1] = false;
+        for (int i = 2; (long) i * i <= n; i++) {
+            if (isPrime[i]) {
+                for (int j = i * i; j <= n; j += i) isPrime[j] = false;
+            }
+        }
+        List<Integer> res = new ArrayList<>();
+        for (int i = 2; i <= n; i++) if (isPrime[i]) res.add(i);
+        return res;
+    }
+
+    public static void main(String[] args) {
+        System.out.println(sieve(50));
+    }
+}`,
+      cpp:
+`#include <iostream>
+#include <vector>
+using namespace std;
+
+vector<int> sieve(int n) {
+    vector<bool> isPrime(n + 1, true);
+    isPrime[0] = false;
+    if (n >= 1) isPrime[1] = false;
+    for (long long i = 2; i * i <= n; ++i)
+        if (isPrime[i])
+            for (long long j = i * i; j <= n; j += i) isPrime[j] = false;
+    vector<int> res;
+    for (int i = 2; i <= n; ++i) if (isPrime[i]) res.push_back(i);
+    return res;
+}
+
+int main() {
+    for (int p : sieve(50)) cout << p << " ";
+    cout << endl;
+    return 0;
+}`,
+      javascript:
+`function sieve(n) {
+  const isPrime = new Array(n + 1).fill(true);
+  isPrime[0] = isPrime[1] = false;
+  for (let i = 2; i * i <= n; i++) {
+    if (!isPrime[i]) continue;
+    for (let j = i * i; j <= n; j += i) isPrime[j] = false;
+  }
+  return isPrime.map((v, i) => (v ? i : -1)).filter(i => i >= 2);
+}
+
+console.log(sieve(50));`
+    }
+  },
+  {
+    id: 'gcd', name: '最大公约数', example: '输入两个正整数，求它们的最大公约数。',
+    keys: ['最大公约数','公约数','gcd','辗转相除','公因数'],
+    time: 'O(log min(a,b))', space: 'O(1)',
+    idea: '欧几里得算法：gcd(a,b) = gcd(b, a mod b)，当余数为 0 时，非零的那个数就是最大公约数。',
+    code: {
+      python:
+`def gcd(a, b):
+    while b:
+        a, b = b, a % b
+    return a
+
+if __name__ == "__main__":
+    a, b = 48, 18
+    print(f"gcd({a}, {b}) = {gcd(a, b)}")`,
+      java:
+`public class Gcd {
+    static int gcd(int a, int b) {
+        while (b != 0) {
+            int t = a % b;
+            a = b;
+            b = t;
+        }
+        return a;
+    }
+
+    public static void main(String[] args) {
+        System.out.println(gcd(48, 18));
+    }
+}`,
+      cpp:
+`#include <iostream>
+using namespace std;
+
+int gcd(int a, int b) {
+    while (b != 0) {
+        int t = a % b;
+        a = b;
+        b = t;
+    }
+    return a;
+}
+
+int main() {
+    cout << gcd(48, 18) << endl;
+    return 0;
+}`,
+      javascript:
+`function gcd(a, b) {
+  while (b !== 0) {
+    [a, b] = [b, a % b];
+  }
+  return a;
+}
+
+console.log(gcd(48, 18));`
+    }
+  },
+  {
+    id: 'palindrome', name: '回文判断', example: '判断一个字符串是否为回文（正着读和倒着读相同）。',
+    keys: ['回文','palindrome','对称','正着读','倒着读'],
+    time: 'O(n)', space: 'O(1)',
+    idea: '双指针从两端向中间靠拢，逐位比较；任意一对字符不同即不是回文，全部相同则是回文。',
+    code: {
+      python:
+`def is_palindrome(s):
+    s = s.lower()
+    i, j = 0, len(s) - 1
+    while i < j:
+        if s[i] != s[j]:
+            return False
+        i += 1
+        j -= 1
+    return True
+
+if __name__ == "__main__":
+    for word in ["level", "hello", "上海自来水来自海上"]:
+        print(word, "->", is_palindrome(word))`,
+      java:
+`public class Palindrome {
+    static boolean isPalindrome(String s) {
+        s = s.toLowerCase();
+        int i = 0, j = s.length() - 1;
+        while (i < j) {
+            if (s.charAt(i) != s.charAt(j)) return false;
+            i++;
+            j--;
+        }
+        return true;
+    }
+
+    public static void main(String[] args) {
+        System.out.println(isPalindrome("level"));
+        System.out.println(isPalindrome("hello"));
+    }
+}`,
+      cpp:
+`#include <iostream>
+#include <string>
+#include <cctype>
+using namespace std;
+
+bool isPalindrome(string s) {
+    for (auto& c : s) c = (char)tolower(c);
+    int i = 0, j = (int)s.size() - 1;
+    while (i < j) {
+        if (s[i] != s[j]) return false;
+        ++i;
+        --j;
+    }
+    return true;
+}
+
+int main() {
+    cout << isPalindrome("level") << endl;
+    cout << isPalindrome("hello") << endl;
+    return 0;
+}`,
+      javascript:
+`function isPalindrome(s) {
+  const t = s.toLowerCase();
+  let i = 0, j = t.length - 1;
+  while (i < j) {
+    if (t[i] !== t[j]) return false;
+    i++;
+    j--;
+  }
+  return true;
+}
+
+console.log(isPalindrome('level'), isPalindrome('hello'));`
+    }
+  },
+  {
+    id: 'maxsub', name: '最大子数组和', example: '给定一个整数数组，求连续子数组的最大和。',
+    keys: ['最大子数组','连续子数组','最大和','子数组','kadane'],
+    time: 'O(n)', space: 'O(1)',
+    idea: 'Kadane 算法：以当前位置结尾的最大和，要么接着前面的最优解，要么从自己重新开始，取二者较大值。',
+    code: {
+      python:
+`def max_subarray(nums):
+    best = cur = nums[0]
+    for x in nums[1:]:
+        cur = max(x, cur + x)
+        best = max(best, cur)
+    return best
+
+if __name__ == "__main__":
+    print(max_subarray([-2, 1, -3, 4, -1, 2, 1, -5, 4]))`,
+      java:
+`public class MaxSubArray {
+    static int maxSubArray(int[] nums) {
+        int best = nums[0], cur = nums[0];
+        for (int i = 1; i < nums.length; i++) {
+            cur = Math.max(nums[i], cur + nums[i]);
+            best = Math.max(best, cur);
+        }
+        return best;
+    }
+
+    public static void main(String[] args) {
+        int[] nums = {-2, 1, -3, 4, -1, 2, 1, -5, 4};
+        System.out.println(maxSubArray(nums));
+    }
+}`,
+      cpp:
+`#include <iostream>
+#include <vector>
+#include <algorithm>
+using namespace std;
+
+int maxSubArray(const vector<int>& nums) {
+    int best = nums[0], cur = nums[0];
+    for (size_t i = 1; i < nums.size(); ++i) {
+        cur = max(nums[i], cur + nums[i]);
+        best = max(best, cur);
+    }
+    return best;
+}
+
+int main() {
+    vector<int> nums = {-2, 1, -3, 4, -1, 2, 1, -5, 4};
+    cout << maxSubArray(nums) << endl;
+    return 0;
+}`,
+      javascript:
+`function maxSubArray(nums) {
+  let best = nums[0], cur = nums[0];
+  for (let i = 1; i < nums.length; i++) {
+    cur = Math.max(nums[i], cur + nums[i]);
+    best = Math.max(best, cur);
+  }
+  return best;
+}
+
+console.log(maxSubArray([-2, 1, -3, 4, -1, 2, 1, -5, 4]));`
+    }
+  },
+  {
+    id: 'reverse', name: '链表反转', example: '反转一个单链表，并输出反转后的结果。',
+    keys: ['链表','反转链表','单链表','linked list','节点'],
+    time: 'O(n)', space: 'O(1)',
+    idea: '三指针迭代：prev 指向已反转部分的头，逐个把当前节点的 next 指向 prev，再整体后移一位。',
+    code: {
+      python:
+`class ListNode:
+    def __init__(self, val=0, nxt=None):
+        self.val = val
+        self.next = nxt
+
+def reverse(head):
+    prev = None
+    while head:
+        nxt = head.next
+        head.next = prev
+        prev = head
+        head = nxt
+    return prev
+
+if __name__ == "__main__":
+    head = None
+    for v in reversed([1, 2, 3, 4, 5]):
+        head = ListNode(v, head)
+    cur = reverse(head)
+    while cur:
+        print(cur.val, end=" ")
+        cur = cur.next`,
+      java:
+`public class ReverseList {
+    static class ListNode {
+        int val;
+        ListNode next;
+        ListNode(int v) { val = v; }
+    }
+
+    static ListNode reverse(ListNode head) {
+        ListNode prev = null;
+        while (head != null) {
+            ListNode nxt = head.next;
+            head.next = prev;
+            prev = head;
+            head = nxt;
+        }
+        return prev;
+    }
+
+    public static void main(String[] args) {
+        ListNode head = null;
+        for (int i = 5; i >= 1; i--) {
+            ListNode node = new ListNode(i);
+            node.next = head;
+            head = node;
+        }
+        for (ListNode p = reverse(head); p != null; p = p.next) {
+            System.out.print(p.val + " ");
+        }
+    }
+}`,
+      cpp:
+`#include <iostream>
+using namespace std;
+
+struct ListNode {
+    int val;
+    ListNode* next;
+    ListNode(int v) : val(v), next(nullptr) {}
+};
+
+ListNode* reverseList(ListNode* head) {
+    ListNode* prev = nullptr;
+    while (head) {
+        ListNode* nxt = head->next;
+        head->next = prev;
+        prev = head;
+        head = nxt;
+    }
+    return prev;
+}
+
+int main() {
+    ListNode* head = nullptr;
+    for (int i = 5; i >= 1; --i) {
+        ListNode* node = new ListNode(i);
+        node->next = head;
+        head = node;
+    }
+    for (ListNode* p = reverseList(head); p; p = p->next)
+        cout << p->val << " ";
+    cout << endl;
+    return 0;
+}`,
+      javascript:
+`function ListNode(val, next = null) {
+  this.val = val;
+  this.next = next;
+}
+
+function reverseList(head) {
+  let prev = null;
+  while (head) {
+    const nxt = head.next;
+    head.next = prev;
+    prev = head;
+    head = nxt;
+  }
+  return prev;
+}
+
+let head = null;
+for (let i = 5; i >= 1; i--) head = new ListNode(i, head);
+let out = [];
+for (let p = reverseList(head); p; p = p.next) out.push(p.val);
+console.log(out.join(' '));`
+    }
+  },
+  {
+    id: 'hanoi', name: '汉诺塔', example: '用递归求解汉诺塔问题，打印把 n 个盘子从 A 移到 C 的每一步。',
+    keys: ['汉诺塔','hanoi','塔','盘子'],
+    time: 'O(2^n)', space: 'O(n)',
+    idea: '把 n 个盘子的问题拆成三步：先把 n-1 个移到辅助柱，再移动最大盘，最后把 n-1 个移到目标柱。',
+    code: {
+      python:
+`moves = 0
+
+def hanoi(n, src, aux, dst):
+    global moves
+    if n == 0:
+        return
+    hanoi(n - 1, src, dst, aux)
+    moves += 1
+    print(f"第 {moves} 步: {src} -> {dst}")
+    hanoi(n - 1, aux, src, dst)
+
+if __name__ == "__main__":
+    hanoi(3, "A", "B", "C")
+    print("总步数:", moves)`,
+      java:
+`public class Hanoi {
+    static int moves = 0;
+
+    static void hanoi(int n, char src, char aux, char dst) {
+        if (n == 0) return;
+        hanoi(n - 1, src, dst, aux);
+        moves++;
+        System.out.println("第 " + moves + " 步: " + src + " -> " + dst);
+        hanoi(n - 1, aux, src, dst);
+    }
+
+    public static void main(String[] args) {
+        hanoi(3, 'A', 'B', 'C');
+        System.out.println("总步数: " + moves);
+    }
+}`,
+      cpp:
+`#include <iostream>
+using namespace std;
+
+int moves = 0;
+
+void hanoi(int n, char src, char aux, char dst) {
+    if (n == 0) return;
+    hanoi(n - 1, src, dst, aux);
+    ++moves;
+    cout << "第 " << moves << " 步: " << src << " -> " << dst << endl;
+    hanoi(n - 1, aux, src, dst);
+}
+
+int main() {
+    hanoi(3, 'A', 'B', 'C');
+    cout << "总步数: " << moves << endl;
+    return 0;
+}`,
+      javascript:
+`let moves = 0;
+
+function hanoi(n, src, aux, dst, log) {
+  if (n === 0) return;
+  hanoi(n - 1, src, dst, aux, log);
+  moves++;
+  log.push('第 ' + moves + ' 步: ' + src + ' -> ' + dst);
+  hanoi(n - 1, aux, src, dst, log);
+}
+
+const log = [];
+hanoi(3, 'A', 'B', 'C', log);
+console.log(log.join(' | '));
+console.log('总步数: ' + moves);`
+    }
+  },
+  {
+    id: 'wordcount', name: '词频统计', example: '统计一段英文文本中每个单词出现的次数，并按次数从高到低输出。',
+    keys: ['词频','单词','出现次数','频率','统计'],
+    time: 'O(n)', space: 'O(k)',
+    idea: '把文本统一转小写后按空格切分，用哈希表累加每个单词的计数，最后按计数排序输出。',
+    code: {
+      python:
+`from collections import Counter
+
+def word_count(text):
+    words = text.lower().split()
+    return Counter(words)
+
+if __name__ == "__main__":
+    text = "the quick brown fox the lazy dog the end"
+    for word, count in word_count(text).most_common():
+        print(word, count)`,
+      java:
+`import java.util.HashMap;
+import java.util.Map;
+
+public class WordCount {
+    public static void main(String[] args) {
+        String text = "the quick brown fox the lazy dog the end";
+        Map<String, Integer> freq = new HashMap<>();
+        for (String w : text.toLowerCase().split(" ")) {
+            if (w.isEmpty()) continue;
+            freq.put(w, freq.getOrDefault(w, 0) + 1);
+        }
+        freq.entrySet().stream()
+            .sorted((a, b) -> b.getValue() - a.getValue())
+            .forEach(e -> System.out.println(e.getKey() + " " + e.getValue()));
+    }
+}`,
+      cpp:
+`#include <iostream>
+#include <map>
+#include <sstream>
+#include <string>
+#include <vector>
+#include <algorithm>
+using namespace std;
+
+int main() {
+    string text = "the quick brown fox the lazy dog the end";
+    map<string, int> freq;
+    istringstream iss(text);
+    string w;
+    while (iss >> w) freq[w]++;
+
+    vector<pair<string, int>> items(freq.begin(), freq.end());
+    sort(items.begin(), items.end(),
+         [](const pair<string, int>& a, const pair<string, int>& b) {
+             return a.second > b.second;
+         });
+    for (auto& p : items) cout << p.first << " " << p.second << endl;
+    return 0;
+}`,
+      javascript:
+`function wordCount(text) {
+  const freq = new Map();
+  const words = text.toLowerCase().split(' ').filter(Boolean);
+  for (const w of words) freq.set(w, (freq.get(w) || 0) + 1);
+  return [...freq.entries()].sort((a, b) => b[1] - a[1]);
+}
+
+console.log(wordCount('the quick brown fox the lazy dog the end'));`
+    }
+  }
+];
+
+/* =========================================================
+   3. 通用兜底模板
+   ========================================================= */
+function fallbackCode(lang, problem) {
+  const p = problem.replace(/\s+/g, ' ').slice(0, 70);
+  const tpl = {
+    python: `# 题目：${p}
+# 未命中内置题型，已生成通用骨架，请补充具体算法
+
+def solve(data):
+    # TODO: 在此实现题目要求的逻辑
+    result = data
+    return result
+
+if __name__ == "__main__":
+    raw = input("输入数据: ").split()
+    print(solve(raw))`,
+    java: `import java.util.Scanner;
+
+// 题目：${p}
+// 未命中内置题型，已生成通用骨架，请补充具体算法
+public class Solution {
+    static String solve(String data) {
+        // TODO: 在此实现题目要求的逻辑
+        return data;
+    }
+
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        String data = sc.nextLine();
+        System.out.println(solve(data));
+    }
+}`,
+    cpp: `#include <iostream>
+#include <string>
+using namespace std;
+
+// 题目：${p}
+// 未命中内置题型，已生成通用骨架，请补充具体算法
+string solve(const string& data) {
+    // TODO: 在此实现题目要求的逻辑
+    return data;
+}
+
+int main() {
+    string data;
+    getline(cin, data);
+    cout << solve(data) << endl;
+    return 0;
+}`,
+    javascript: `// 题目：${p}
+// 未命中内置题型，已生成通用骨架，请补充具体算法
+
+function solve(data) {
+  // TODO: 在此实现题目要求的逻辑
+  return data;
+}
+
+const input = 'sample';
+console.log(solve(input));`
+  };
+  return tpl[lang];
+}
+
+/* =========================================================
+   4. 状态与工具函数
+   ========================================================= */
+const state = { lang: 'python', mode: 'local', busy: false };
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+function toast(msg) {
+  const el = $('toast');
+  el.textContent = msg;
+  el.classList.add('on');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('on'), 2200);
+}
+
+/* ---------- 语法高亮 ---------- */
+function highlight(code, langKey) {
+  const cfg = LANGS[langKey];
+  const kws = new Set(cfg.keywords);
+  let out = '', i = 0;
+  const n = code.length;
+
+  while (i < n) {
+    const ch = code[i];
+
+    if (cfg.preproc && ch === '#') {
+      let j = code.indexOf('\n', i);
+      if (j < 0) j = n;
+      out += '<span class="t-pre">' + esc(code.slice(i, j)) + '</span>';
+      i = j;
+      continue;
+    }
+    if (code.startsWith(cfg.lineComment, i)) {
+      let j = code.indexOf('\n', i);
+      if (j < 0) j = n;
+      out += '<span class="t-com">' + esc(code.slice(i, j)) + '</span>';
+      i = j;
+      continue;
+    }
+    if (code.startsWith('/*', i)) {
+      let j = code.indexOf('*/', i + 2);
+      j = j < 0 ? n : j + 2;
+      out += '<span class="t-com">' + esc(code.slice(i, j)) + '</span>';
+      i = j;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      let j = i + 1;
+      while (j < n && code[j] !== ch) {
+        if (code[j] === '\\') j++;
+        j++;
+      }
+      j = Math.min(j + 1, n);
+      out += '<span class="t-str">' + esc(code.slice(i, j)) + '</span>';
+      i = j;
+      continue;
+    }
+    if (/[0-9]/.test(ch) && !/[A-Za-z_$]/.test(code[i - 1] || '')) {
+      let j = i;
+      while (j < n && /[0-9.]/.test(code[j])) j++;
+      out += '<span class="t-num">' + esc(code.slice(i, j)) + '</span>';
+      i = j;
+      continue;
+    }
+    if (/[A-Za-z_$]/.test(ch)) {
+      let j = i;
+      while (j < n && /[A-Za-z0-9_$]/.test(code[j])) j++;
+      const word = code.slice(i, j);
+      let cls = '';
+      if (kws.has(word)) cls = 't-kw';
+      else if (code[j] === '(') cls = 't-fn';
+      out += cls ? '<span class="' + cls + '">' + esc(word) + '</span>' : esc(word);
+      i = j;
+      continue;
+    }
+    out += esc(ch);
+    i++;
+  }
+  return out;
+}
+
+/* ---------- 题目匹配 ---------- */
+function matchTopic(text) {
+  const lower = text.toLowerCase();
+  let best = null;
+  for (const t of TOPICS) {
+    let score = 0;
+    const hits = [];
+    for (const k of t.keys) {
+      if (lower.includes(k.toLowerCase())) {
+        score += k.length >= 3 ? 3 : 2;
+        hits.push(k);
+      }
+    }
+    if (score > 0 && (!best || score > best.score)) best = { topic: t, score, hits };
+  }
+  return best;
+}
+
+/* =========================================================
+   5. 渲染
+   ========================================================= */
+function renderLangs() {
+  $('langs').innerHTML = Object.keys(LANGS).map(k =>
+    `<button data-lang="${k}" class="${k === state.lang ? 'on' : ''}">${LANGS[k].label}</button>`
+  ).join('');
+  $('langs').querySelectorAll('button').forEach(b => {
+    b.onclick = () => { state.lang = b.dataset.lang; renderLangs(); $('langBadge').textContent = LANGS[state.lang].label; };
+  });
+}
+
+function renderExamples() {
+  $('examples').innerHTML = TOPICS.slice(0, 5).map((t, i) =>
+    `<button data-i="${i}">${t.name}</button>`
+  ).join('');
+  $('examples').querySelectorAll('button').forEach(b => {
+    b.onclick = () => {
+      $('problem').value = TOPICS[b.dataset.i].example;
+      updateCount();
+      generate();
+    };
+  });
+}
+
+function renderTopicGrid() {
+  $('tgrid').innerHTML = TOPICS.map((t, i) =>
+    `<button class="tcard" data-i="${i}">
+       <b>${t.name}</b><small>${t.time} · ${t.space}</small>
+     </button>`
+  ).join('');
+  $('tgrid').querySelectorAll('.tcard').forEach(c => {
+    c.onclick = () => {
+      $('problem').value = TOPICS[c.dataset.i].example;
+      updateCount();
+      generate();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+  });
+}
+
+function setCode(code) {
+  const lines = code.split('\n');
+  $('gutter').textContent = lines.map((_, i) => i + 1).join('\n');
+  $('code').innerHTML = highlight(code, state.lang);
+  $('statLines').textContent = lines.length + ' 行';
+  $('code').dataset.raw = code;
+}
+
+function updateCount() {
+  $('charCount').textContent = $('problem').value.trim().length + ' 字';
+}
+
+/* =========================================================
+   6. 生成流程
+   ========================================================= */
+function localGenerate(problem) {
+  const m = matchTopic(problem);
+  if (m) {
+    return {
+      code: m.topic.code[state.lang],
+      analysis: {
+        name: m.topic.name,
+        conf: Math.min(98, 62 + m.score * 5) + '%',
+        time: m.topic.time,
+        space: m.topic.space,
+        idea: m.topic.idea,
+        hits: m.hits
+      },
+      engine: '本地规则'
+    };
+  }
+  return {
+    code: fallbackCode(state.lang, problem),
+    analysis: {
+      name: '通用骨架',
+      conf: '—',
+      time: '取决于算法',
+      space: '取决于算法',
+      idea: '题目未命中内置的 10 类题型，已生成该语言的标准工程骨架（输入解析 + 待实现函数 + 输出），可直接在此基础上补全逻辑。',
+      hits: []
+    },
+    engine: '本地规则'
+  };
+}
+
+async function apiGenerate(problem) {
+  const cfg = JSON.parse(localStorage.getItem('cf_cfg') || '{}');
+  if (!cfg.base || !cfg.key || !cfg.model) throw new Error('接口未配置');
+
+  const sys = '你是一个严谨的代码生成器。根据用户给出的编程题目，生成完整、可直接运行的 ' +
+    LANGS[state.lang].label + ' 代码。要求：包含必要的输入处理与测试入口；只输出代码，不要任何解释文字，不要使用 Markdown 代码块。';
+
+  const res = await fetch(cfg.base.replace(/\/+$/, '') + '/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + cfg.key },
+    body: JSON.stringify({
+      model: cfg.model,
+      temperature: 0.2,
+      messages: [{ role: 'system', content: sys }, { role: 'user', content: problem }]
+    })
+  });
+  if (!res.ok) throw new Error('接口返回 ' + res.status);
+  const data = await res.json();
+  let text = (data.choices && data.choices[0] && data.choices[0].message.content) || '';
+  text = text.replace(/^```[a-zA-Z]*\n?/, '').replace(/```$/, '').trim();
+  if (!text) throw new Error('返回内容为空');
+  return text;
+}
+
+async function generate() {
+  if (state.busy) return;
+  const problem = $('problem').value.trim();
+  if (!problem) { toast('请先输入题目描述'); $('problem').focus(); return; }
+
+  state.busy = true;
+  const btn = $('genBtn');
+  btn.disabled = true;
+  const t0 = performance.now();
+
+  $('status').textContent = '① 解析题目语义…';
+  await new Promise(r => setTimeout(r, 160));
+  $('status').textContent = '② 匹配算法题型…';
+  await new Promise(r => setTimeout(r, 160));
+  $('status').textContent = '③ 合成 ' + LANGS[state.lang].label + ' 代码…';
+  await new Promise(r => setTimeout(r, 140));
+
+  let result;
+  if (state.mode === 'api') {
+    try {
+      $('status').textContent = '④ 正在调用大模型…';
+      const code = await apiGenerate(problem);
+      result = {
+        code,
+        analysis: { name: '大模型生成', conf: '—', time: '—', space: '—',
+          idea: '由大语言模型直接生成，未经过本地题型匹配。', hits: [] },
+        engine: '大模型'
+      };
+    } catch (e) {
+      toast('接口调用失败，已回退本地引擎：' + e.message);
+      result = localGenerate(problem);
+    }
+  } else {
+    result = localGenerate(problem);
+  }
+
+  setCode(result.code);
+  const a = result.analysis;
+  $('aTopic').textContent = a.name;
+  $('aConf').textContent = a.conf;
+  $('aTime').textContent = a.time;
+  $('aSpace').textContent = a.space;
+  $('aIdea').textContent = a.idea;
+  $('aHits').innerHTML = a.hits.length
+    ? a.hits.map(h => `<span>${esc(h)}</span>`).join('')
+    : '<span>未匹配到关键词</span>';
+  $('analysis').classList.add('show');
+
+  $('statEngine').textContent = '引擎：' + result.engine;
+  $('statTime').textContent = '耗时 ' + Math.round(performance.now() - t0) + ' ms';
+  $('status').textContent = '✔ 生成完成';
+
+  btn.disabled = false;
+  state.busy = false;
+}
+
+/* =========================================================
+   7. 交互绑定
+   ========================================================= */
+$('genBtn').onclick = generate;
+
+$('problem').addEventListener('input', updateCount);
+$('problem').addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); generate(); }
+});
+
+$('clearBtn').onclick = () => {
+  $('problem').value = '';
+  updateCount();
+  $('code').innerHTML = '';
+  $('gutter').textContent = '';
+  $('analysis').classList.remove('show');
+  $('status').textContent = '';
+  $('statLines').textContent = '0 行';
+  $('statTime').textContent = '耗时 0 ms';
+};
+
+$('copyBtn').onclick = async () => {
+  const code = $('code').dataset.raw || '';
+  if (!code) { toast('还没有生成代码'); return; }
+  try {
+    await navigator.clipboard.writeText(code);
+    toast('已复制到剪贴板');
+  } catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = code; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); ta.remove();
+    toast('已复制到剪贴板');
+  }
+};
+
+$('dlBtn').onclick = () => {
+  const code = $('code').dataset.raw || '';
+  if (!code) { toast('还没有生成代码'); return; }
+  const name = ($('aTopic').textContent === '通用骨架' ? 'solution' : 'solution');
+  const blob = new Blob([code], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name + '.' + LANGS[state.lang].ext;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('已下载 ' + a.download);
+};
+
+/* ---------- 设置抽屉 ---------- */
+function openDrawer(on) {
+  $('drawer').classList.toggle('on', on);
+  $('overlay').classList.toggle('on', on);
+  if (on) {
+    const cfg = JSON.parse(localStorage.getItem('cf_cfg') || '{}');
+    $('cfgBase').value = cfg.base || 'https://api.deepseek.com/v1';
+    $('cfgKey').value = cfg.key || '';
+    $('cfgModel').value = cfg.model || 'deepseek-chat';
+    paintMode();
+  }
+}
+function paintMode() {
+  $('mLocal').classList.toggle('on', state.mode === 'local');
+  $('mApi').classList.toggle('on', state.mode === 'api');
+}
+function paintEngine() {
+  const isApi = state.mode === 'api';
+  $('engineText').textContent = isApi ? '大模型接口' : '本地引擎';
+  $('engineDot').classList.toggle('api', isApi);
+}
+
+$('openSet').onclick = () => openDrawer(true);
+$('overlay').onclick = () => openDrawer(false);
+$('mLocal').onclick = () => { state.mode = 'local'; paintMode(); paintEngine(); };
+$('mApi').onclick = () => { state.mode = 'api'; paintMode(); paintEngine(); };
+
+$('saveSet').onclick = () => {
+  const cfg = {
+    base: $('cfgBase').value.trim(),
+    key: $('cfgKey').value.trim(),
+    model: $('cfgModel').value.trim()
+  };
+  localStorage.setItem('cf_cfg', JSON.stringify(cfg));
+  localStorage.setItem('cf_mode', state.mode);
+  toast('已保存');
+  openDrawer(false);
+};
+
+/* =========================================================
+   8. 初始化
+   ========================================================= */
+(function init() {
+  renderLangs();
+  renderExamples();
+  renderTopicGrid();
+  updateCount();
+  $('langBadge').textContent = LANGS[state.lang].label;
+
+  const savedMode = localStorage.getItem('cf_mode');
+  if (savedMode === 'api') { state.mode = 'api'; paintEngine(); }
+
+  // #demo：打开页面即自动跑一遍，方便课堂演示/录屏
+  if (location.hash === '#demo') {
+    $('problem').value = TOPICS[0].example;
+    updateCount();
+    setTimeout(generate, 350);
+  }
+})();
+</script>
+</body>
+</html>
